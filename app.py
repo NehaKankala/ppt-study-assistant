@@ -3,7 +3,7 @@ from file_reader import extract_slide_texts, extract_pdf_texts  # ✅ handles bo
 from explainer import simplify_and_enrich
 from quiz_generator import generate_mcqs
 from pdf_writer import create_study_pdf
-from voice_generator import generate_voice, generate_video  # ✅ new
+
 import os
 
 st.set_page_config(layout="wide")
@@ -32,25 +32,6 @@ if uploaded_file:
     with st.expander("🧾 Complete Simplified Explanation"):
         st.write(st.session_state.explanation)
 
-    # --- Voice Generation ---
-    if st.button("🎤 Generate Voiceover"):
-        with st.spinner("Generating voice..."):
-            voice_path = generate_voice(st.session_state.explanation)
-        if voice_path:
-            st.success("🎧 Voice generated!")
-            st.audio(voice_path, format="audio/mp3")
-        else:
-            st.error("❌ Failed to generate voice.")
-
-    # --- Video Generation ---
-    if st.button("🎥 Generate Video Explanation"):
-        with st.spinner("Generating video..."):
-            video_path = generate_video(st.session_state.explanation)
-        if video_path:
-            st.success("📽️ Video generated!")
-            st.video(video_path)
-        else:
-            st.error("❌ Failed to generate video.")
 
     # --- PDF Generation ---
     if st.button("📄 Generate Study Notes PDF"):
