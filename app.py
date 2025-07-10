@@ -1,12 +1,15 @@
 import streamlit as st
-from ppt_reader import extract_slide_texts,extract_pdf_texts
+from file_reader import extract_slide_texts, extract_pdf_texts  # ✅ handles both ppt and pdf
 from explainer import simplify_and_enrich
 from quiz_generator import generate_mcqs
 from pdf_writer import create_study_pdf
+from voice_generator import generate_voice, generate_video  # ✅ new
 import os
 
 st.set_page_config(layout="wide")
-st.title("🧠 AI-Powered PPT Explainer, Quiz & Avatar Guide")
+st.title("🧠 AI-Powered Study Assistant")
+
+uploaded_file = st.file_uploader("📤 Upload your PPT or PDF file", type=["pptx", "pdf"])
 
 if uploaded_file:
     with st.spinner("🔍 Extracting and simplifying content..."):
@@ -26,11 +29,30 @@ if uploaded_file:
 
     st.success("✅ Explanation complete!")
 
-    # --- Explanation Display ---
-    with st.expander("🧾 Complete Explanation"):
+    with st.expander("🧾 Complete Simplified Explanation"):
         st.write(st.session_state.explanation)
 
-    # --- Study Notes PDF ---
+    # --- Voice Generation ---
+    if st.button("🎤 Generate Voiceover"):
+        with st.spinner("Generating voice..."):
+            voice_path = generate_voice(st.session_state.explanation)
+        if voice_path:
+            st.success("🎧 Voice generated!")
+            st.audio(voice_path, format="audio/mp3")
+        else:
+            st.error("❌ Failed to generate voice.")
+
+    # --- Video Generation ---
+    if st.button("🎥 Generate Video Explanation"):
+        with st.spinner("Generating video..."):
+            video_path = generate_video(st.session_state.explanation)
+        if video_path:
+            st.success("📽️ Video generated!")
+            st.video(video_path)
+        else:
+            st.error("❌ Failed to generate video.")
+
+    # --- PDF Generation ---
     if st.button("📄 Generate Study Notes PDF"):
         os.makedirs("static/user_outputs", exist_ok=True)
         pdf_path = "static/user_outputs/study_notes.pdf"
@@ -39,7 +61,7 @@ if uploaded_file:
         with open(pdf_path, "rb") as f:
             st.download_button("⬇️ Download Study Notes PDF", f.read(), file_name="study_notes.pdf")
 
-    # --- Quiz Generator ---
+    # --- Quiz Generation ---
     if st.button("🎮 Generate Quiz from Explanation"):
         with st.spinner("Generating quiz..."):
             quiz = generate_mcqs(st.session_state.explanation)
@@ -50,7 +72,7 @@ if uploaded_file:
         else:
             st.warning("❗ No valid quiz generated.")
 
-# --- Quiz Section ---
+# --- Display Quiz ---
 if "quiz_data" in st.session_state:
     st.header("📝 Take the Quiz")
 
@@ -67,7 +89,7 @@ if "quiz_data" in st.session_state:
     if st.button("✅ Submit Quiz"):
         st.session_state.quiz_submitted = True
 
-# --- Score Display ---
+# --- Show Score ---
 if st.session_state.get("quiz_submitted", False):
     score = 0
     st.success("🎯 Quiz Results")

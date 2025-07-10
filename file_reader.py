@@ -1,4 +1,3 @@
-# file_reader.py
 from pptx import Presentation
 import fitz  # PyMuPDF
 
