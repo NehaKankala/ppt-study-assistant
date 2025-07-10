@@ -1,5 +1,5 @@
 import streamlit as st
-from ppt_reader import extract_slide_texts
+from ppt_reader import extract_slide_texts,extract_pdf_texts
 from explainer import simplify_and_enrich
 from quiz_generator import generate_mcqs
 from pdf_writer import create_study_pdf
@@ -8,16 +8,21 @@ import os
 st.set_page_config(layout="wide")
 st.title("🧠 AI-Powered PPT Explainer, Quiz & Avatar Guide")
 
-uploaded_ppt = st.file_uploader("📤 Upload your PPT file", type=["pptx"])
+if uploaded_file:
+    with st.spinner("🔍 Extracting and simplifying content..."):
+        file_type = uploaded_file.name.split('.')[-1].lower()
 
-if uploaded_ppt:
-    with st.spinner("🔍 Extracting and simplifying slides..."):
-        slides = extract_slide_texts(uploaded_ppt)
+        if file_type == 'pptx':
+            slides = extract_slide_texts(uploaded_file)
+        elif file_type == 'pdf':
+            slides = extract_pdf_texts(uploaded_file)
+        else:
+            st.error("❌ Unsupported file type")
+            st.stop()
+
         combined_text = "\n".join(slides)
-
-        if "explanation" not in st.session_state:
-            explanation = simplify_and_enrich(combined_text)
-            st.session_state.explanation = explanation
+        explanation = simplify_and_enrich(combined_text)
+        st.session_state.explanation = explanation
 
     st.success("✅ Explanation complete!")
 
