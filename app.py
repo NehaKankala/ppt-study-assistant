@@ -1,50 +1,51 @@
 import streamlit as st
 from ppt_reader import extract_slide_texts
 from explainer import simplify_and_enrich
-from quiz_generator import generate_mcq
+from quiz_generator import generate_mcqs
 from pdf_writer import create_study_pdf
 import os
 
 st.set_page_config(layout="wide")
-st.title("🧠 AI-Powered PPT Explainer and Quiz Generator")
+st.title("🧠 AI-Powered PPT Explainer, Quiz & Avatar Guide")
 
 uploaded_ppt = st.file_uploader("📤 Upload your PPT file", type=["pptx"])
 
 if uploaded_ppt:
     with st.spinner("🔍 Extracting and simplifying slides..."):
         slides = extract_slide_texts(uploaded_ppt)
-        explanations = [simplify_and_enrich(s) for s in slides if s.strip()]
-        st.session_state.explanations = explanations
+        combined_text = "\n".join(slides)
 
-    st.success("✅ Explanations ready!")
+        if "explanation" not in st.session_state:
+            explanation = simplify_and_enrich(combined_text)
+            st.session_state.explanation = explanation
 
-    for i, exp in enumerate(explanations):
-        with st.expander(f"Slide {i+1}"):
-            st.write(exp)
+    st.success("✅ Explanation complete!")
 
+    # --- Explanation Display ---
+    with st.expander("🧾 Complete Explanation"):
+        st.write(st.session_state.explanation)
+
+    # --- Study Notes PDF ---
     if st.button("📄 Generate Study Notes PDF"):
         os.makedirs("static/user_outputs", exist_ok=True)
         pdf_path = "static/user_outputs/study_notes.pdf"
-        create_study_pdf(explanations, pdf_path)
-        st.success("PDF generated!")
+        create_study_pdf([st.session_state.explanation], pdf_path)
+        st.success("📘 PDF generated!")
         with open(pdf_path, "rb") as f:
             st.download_button("⬇️ Download Study Notes PDF", f.read(), file_name="study_notes.pdf")
 
-    if st.button("🎮 Generate Quiz from Explanations"):
-        with st.spinner("🧠 Generating quiz..."):
-            quiz = []
-            for e in explanations:
-                mcq = generate_mcq(e)
-                if mcq and mcq["question"] != "Error generating question" and len(mcq["options"]) == 4:
-                    quiz.append(mcq)
+    # --- Quiz Generator ---
+    if st.button("🎮 Generate Quiz from Explanation"):
+        with st.spinner("Generating quiz..."):
+            quiz = generate_mcqs(st.session_state.explanation)
         if quiz:
             st.session_state.quiz_data = quiz
             st.session_state.user_answers = [None] * len(quiz)
             st.session_state.quiz_submitted = False
         else:
-            st.error("❗ No valid quiz generated")
+            st.warning("❗ No valid quiz generated.")
 
-# --- Display Quiz ---
+# --- Quiz Section ---
 if "quiz_data" in st.session_state:
     st.header("📝 Take the Quiz")
 
@@ -53,14 +54,15 @@ if "quiz_data" in st.session_state:
         selected = st.radio(
             f"Select your answer for Q{i+1}",
             mcq['options'],
-            key=f"q{i}"
+            key=f"q{i}",
+            index=None
         )
         st.session_state.user_answers[i] = selected
 
     if st.button("✅ Submit Quiz"):
         st.session_state.quiz_submitted = True
 
-# --- Show Score ---
+# --- Score Display ---
 if st.session_state.get("quiz_submitted", False):
     score = 0
     st.success("🎯 Quiz Results")
@@ -70,7 +72,7 @@ if st.session_state.get("quiz_submitted", False):
         correct_ans = mcq["answer"]
         st.markdown(f"**Q{i+1}: {mcq['question']}**")
         st.write(f"✅ Correct Answer: `{correct_ans}`")
-        st.write(f"🧑 Your Answer: `{user_ans}`")
+        st.write(f"🧑 Your Answer: `{user_ans or 'Not answered'}`")
         st.markdown("---")
         if user_ans == correct_ans:
             score += 1

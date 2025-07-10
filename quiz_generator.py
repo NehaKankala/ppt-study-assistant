@@ -2,27 +2,44 @@ import google.generativeai as genai
 import json
 import re
 
-genai.configure(api_key="AIzaSyCpN_U0zXU80WFrs0s9qWVfxxA1GvvuHDQ")
-model = genai.GenerativeModel("gemini-1.5-flash")
+# Replace with your valid Gemini API key
+genai.configure(api_key="AIzaSyCyOHpHs2SsRQKAO3PeFg7MAt-2UWfK_ZM")
+model = genai.GenerativeModel("models/gemini-1.5-flash")
 
-def generate_mcq(text):
+def generate_mcqs(text):
     prompt = f"""
-Generate one multiple choice question from this text with 4 options and the correct answer in JSON format:
+Act as a quiz generator. Extract as many good multiple-choice questions (MCQs) as possible from the following content.
+Each MCQ should have:
+- A clear question
+- 4 unique options
+- 1 correct answer
+
+Return your response in **only** this exact JSON format:
+[
+  {{
+    "question": "What is...",
+    "options": ["Option A", "Option B", "Option C", "Option D"],
+    "answer": "Option B"
+  }},
+  ...
+]
+
+Here is the content to generate questions from:
 {text}
-Respond exactly in this format:
-{{
-  "question": "...",
-  "options": ["...", "...", "...", "..."],
-  "answer": "..."
-}}
 """
+
     try:
         response = model.generate_content(prompt)
         output = response.text
-        match = re.search(r'\{.*\}', output, re.DOTALL)
+
+        # Extract only the JSON array from response
+        match = re.search(r'\[.*\]', output, re.DOTALL)
         if match:
             return json.loads(match.group())
+        else:
+            print("⚠️ JSON not detected in response.")
     except Exception as e:
-        print(f"MCQ generation error: {e}")
-    return {"question": "Error generating question", "options": [], "answer": ""}
+        print(f"❌ MCQ generation error: {e}")
+
+    return []
 

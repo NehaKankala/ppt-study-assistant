@@ -1,41 +1,44 @@
-from reportlab.pdfgen import canvas
-from reportlab.lib.pagesizes import letter
-from reportlab.pdfbase.ttfonts import TTFont
-from reportlab.pdfbase import pdfmetrics
-from textwrap import wrap
+from reportlab.lib.pagesizes import A4
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.enums import TA_LEFT
+from reportlab.lib.units import inch
+import html
 
-# ✅ Register Unicode font (supports emojis like 📘)
-pdfmetrics.registerFont(TTFont('DejaVuSans', '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'))
+def clean_html(text):
+    # Remove broken tags and only allow <b>, <i>, <u>
+    allowed_tags = ['b', 'i', 'u']
+    text = html.escape(text)  # Escape all HTML first
+    # Then unescape allowed tags
+    for tag in allowed_tags:
+        text = text.replace(f"&lt;{tag}&gt;", f"<{tag}>").replace(f"&lt;/{tag}&gt;", f"</{tag}>")
+    return text
 
 def create_study_pdf(explanations, filename):
-    c = canvas.Canvas(filename, pagesize=letter)
-    c.setFont("DejaVuSans", 12)
+    doc = SimpleDocTemplate(filename, pagesize=A4,
+                            rightMargin=40, leftMargin=40,
+                            topMargin=60, bottomMargin=60)
 
-    width, height = letter
-    left_margin = 50
-    right_margin = 50
-    y = height - 50
-    line_height = 18
-    max_chars_per_line = 90  # Adjust for font size
+    styles = getSampleStyleSheet()
+    styles.add(ParagraphStyle(name='SlideTitle', fontSize=16, leading=20, spaceAfter=12, alignment=TA_LEFT, fontName='Helvetica-Bold'))
+    styles.add(ParagraphStyle(name='SlideText', fontSize=12, leading=16, spaceAfter=10, alignment=TA_LEFT))
 
-    for i, explanation in enumerate(explanations, 1):
-        title = f"📘 Slide {i}:"
-        content = title + "\n" + explanation
+    story = []
 
-        # Split content by lines and wrap each long line
-        lines = []
-        for line in content.split("\n"):
-            lines.extend(wrap(line, width=max_chars_per_line))
+    # Add the single heading
+    story.append(Paragraph("Simpler Explanation", styles['SlideTitle']))
+    story.append(Spacer(1, 12))
 
-        for line in lines:
-            if y < 50:  # If we reach bottom, go to next page
-                c.showPage()
-                c.setFont("DejaVuSans", 12)
-                y = height - 50
-            c.drawString(left_margin, y, line)
-            y -= line_height
+    # Combine and write all lines neatly
+    if isinstance(explanations, list):
+        explanation_text = "\n".join(explanations)
+    else:
+        explanation_text = explanations
 
-        y -= 15  # Extra space between slides
+    for line in explanation_text.split('\n'):
+        cleaned_line = clean_html(line.strip())
+        if cleaned_line:
+            story.append(Paragraph(cleaned_line, styles['SlideText']))
 
-    c.save()
+    doc.build(story)
 
